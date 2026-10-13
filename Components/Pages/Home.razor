@@ -1,0 +1,77 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using System.Text.Json
+
+<PageTitle>Dragon Ball</PageTitle>
+
+<h1>Buscar Personagem</h1>
+
+<p>Digite o id do personagem:</p>
+<input type="number" @bind="id" />
+<button @onclick="Buscar">Buscar</button>
+
+@if (erro != "")
+{
+    <p style="color: red;">@erro</p>
+}
+
+@if (nome != "")
+{
+    <h1>Informações do Personagem</h1>
+    <p><b>Nome:</b> @nome</p>
+    <p><b>Planeta de Origem:</b> @planeta</p>
+    <h3>Transformações:</h3>
+
+    if (transformacoes.Count == 0)
+    {
+        <p>Esse personagem não tem transformações.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (string t in transformacoes)
+            {
+                <li>@t</li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private int id = 1;
+    private string nome = "";
+    private string planeta = "";
+    private List<string> transformacoes = new List<string>();
+    private string erro = "";
+
+    private async Task Buscar()
+    {
+        // limpa os dados da busca anterior
+        erro = "";
+        nome = "";
+        planeta = "";
+        transformacoes = new List<string>();
+
+        try
+        {
+            HttpClient cliente = new HttpClient();
+            string resposta = await cliente.GetStringAsync("https://dragonball-api.com/api/characters/" + id);
+
+            JsonDocument json = JsonDocument.Parse(resposta);
+            JsonElement personagem = json.RootElement;
+
+            nome = personagem.GetProperty("name").GetString() ?? "";
+            planeta = personagem.GetProperty("originPlanet").GetProperty("name").GetString() ?? "";
+
+            // passa por cada transformacao e guarda o nome
+            foreach (JsonElement t in personagem.GetProperty("transformations").EnumerateArray())
+            {
+                transformacoes.Add(t.GetProperty("name").GetString() ?? "");
+            }
+        }
+        catch
+        {
+            erro = "Personagem não encontrado. Tente outro id.";
+        }
+    }
+}
